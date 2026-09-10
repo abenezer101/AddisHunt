@@ -200,6 +200,48 @@ body {
   background-color: var(--surface-50);
 }
 
+/* Fluid Page Container - scaled for 3024x1964 and high-DPI viewports */
+.page-container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  max-width: 1240px;
+}
+
+@media (min-width: 1440px) {
+  .page-container {
+    max-width: 1400px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  .page-container {
+    max-width: 1680px;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
+@media (min-width: 2560px) {
+  .page-container {
+    max-width: 2040px;
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+@media (min-width: 3000px) {
+  .page-container {
+    max-width: 2400px;
+    padding-left: 3.5rem;
+    padding-right: 3.5rem;
+  }
+}
+
 /* Selection */
 ::selection {
   background-color: var(--ink-900);

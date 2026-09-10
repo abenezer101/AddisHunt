@@ -1,7 +1,16 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  turbopack: {
+    root: __dirname,
+  },
+  allowedDevOrigins: ["*.e2b.app"],
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "i.pravatar.cc" },
+    ],
+  },
+}
 
-export default nextConfig;
+export default nextConfig

@@ -117,23 +117,23 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--ink-900)] font-body antialiased">
       <Header />
 
-      <main className="flex-grow w-full max-w-[1240px] mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      <main className="flex-grow w-full page-container py-6 sm:py-8 2xl:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 2xl:gap-10 3xl:gap-12 items-stretch">
           {/* Main Content Column (8 cols): header + products + banner */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
+          <div className="lg:col-span-8 flex flex-col gap-6 2xl:gap-8">
             {/* Header & Tabs */}
-            <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+            <div className="flex items-center justify-between border-b border-[var(--border)] pb-3.5">
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold font-display text-[var(--ink-900)] tracking-tight">
+                <h1 className="text-xl sm:text-2xl 2xl:text-3xl font-bold font-display text-[var(--ink-900)] tracking-tight">
                   Top Products Launching Today
                 </h1>
               </div>
 
-              <div className="flex items-center gap-1 bg-[var(--surface-50)] p-1 rounded-full border border-[var(--border)] text-xs font-semibold">
+              <div className="flex items-center gap-1 bg-[var(--surface-50)] p-1 rounded-full border border-[var(--border)] text-xs 2xl:text-sm font-semibold">
                 <button
                   type="button"
                   onClick={() => setActiveTab("featured")}
-                  className={`px-3 py-1 rounded-full transition-colors cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full transition-colors cursor-pointer ${
                     activeTab === "featured"
                       ? "bg-[var(--bg)] text-[var(--ink-900)] shadow-2xs"
                       : "text-[var(--ink-500)] hover:text-[var(--ink-900)]"
@@ -144,7 +144,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("all")}
-                  className={`px-3 py-1 rounded-full transition-colors cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full transition-colors cursor-pointer ${
                     activeTab === "all"
                       ? "bg-[var(--bg)] text-[var(--ink-900)] shadow-2xs"
                       : "text-[var(--ink-500)] hover:text-[var(--ink-900)]"
@@ -156,7 +156,7 @@ export default function Home() {
             </div>
 
             {/* Products List */}
-            <div className="space-y-3.5">
+            <div className="space-y-3.5 2xl:space-y-4">
               {todayProducts.map((product) => (
                 <ProductCard key={product.name} product={product} />
               ))}
@@ -167,14 +167,14 @@ export default function Home() {
               href="https://link.prepl.me/74FF"
               target="_blank"
               rel="noopener noreferrer"
-              className="block rounded-2xl overflow-hidden border border-[var(--border)] shadow-sm relative group cursor-pointer max-h-[280px]"
+              className="block rounded-2xl overflow-hidden border border-[var(--border)] shadow-sm relative group cursor-pointer max-h-[280px] xl:max-h-[340px] 2xl:max-h-[420px] 3xl:max-h-[480px]"
             >
               <Image
                 src="/images/prepl-launch-banner.webp"
                 alt="Promotional Banner"
                 width={1600}
                 height={605}
-                sizes="(max-width: 768px) 100vw, 800px"
+                sizes="(max-width: 768px) 100vw, (max-width: 1440px) 1000px, 1400px"
                 loading="lazy"
                 decoding="async"
                 className="w-full h-auto object-cover object-center group-hover:opacity-95 transition-opacity"
@@ -186,28 +186,28 @@ export default function Home() {
           <aside className="lg:col-span-4 flex flex-col">
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-base sm:text-lg font-bold font-display text-[var(--ink-900)] tracking-tight">
+                <h2 className="text-base sm:text-lg 2xl:text-xl font-bold font-display text-[var(--ink-900)] tracking-tight">
                   Trending Forum Threads
                 </h2>
               </div>
 
-              <div className="space-y-3.5">
+              <div className="space-y-3.5 2xl:space-y-4 flex-1">
                 {forumThreads.map((thread, i) => (
-                  <div key={i} className="space-y-1 pb-3 border-b border-[var(--border)] last:border-b-0">
-                    <span className="text-xs font-medium text-[var(--ink-500)] block">
+                  <div key={i} className="space-y-1 pb-3 2xl:pb-4 border-b border-[var(--border)] last:border-b-0">
+                    <span className="text-xs 2xl:text-sm font-medium text-[var(--ink-500)] block">
                       {thread.channel}
                     </span>
-                    <h3 className="text-sm font-bold font-display text-[var(--ink-900)] hover:underline cursor-pointer leading-snug">
+                    <h3 className="text-sm 2xl:text-base font-bold font-display text-[var(--ink-900)] hover:underline cursor-pointer leading-snug">
                       {thread.title}
                     </h3>
-                    <div className="flex items-center gap-3 text-xs text-[var(--ink-500)] pt-1">
+                    <div className="flex items-center gap-3 text-xs 2xl:text-sm text-[var(--ink-500)] pt-1">
                       <span className="flex items-center gap-1 font-medium hover:text-[var(--ink-900)] cursor-pointer">
-                        <UpvoteIcon className="text-xs" />
+                        <UpvoteIcon className="text-xs 2xl:text-sm" />
                         Upvote ({thread.upvotes})
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
-                        <CommentIcon className="text-xs" />
+                        <CommentIcon className="text-xs 2xl:text-sm" />
                         {thread.comments}
                       </span>
                       {thread.online && (
@@ -225,18 +225,18 @@ export default function Home() {
               </div>
 
               {/* Sidebar Action Buttons */}
-              <div className="space-y-2.5 pt-4">
+              <div className="space-y-2.5 pt-4 2xl:pt-6 mt-auto">
                 <Link
                   href="/launches"
-                  className="w-full py-2.5 border border-[var(--border)] rounded-full text-sm font-semibold text-[var(--ink-900)] hover:bg-[var(--surface-50)] transition-colors text-center block cursor-pointer"
+                  className="w-full py-2.5 2xl:py-3 border border-[var(--border)] rounded-full text-sm 2xl:text-base font-semibold text-[var(--ink-900)] hover:bg-[var(--surface-50)] transition-colors text-center block cursor-pointer"
                 >
                   View all
                 </Link>
                 <Link
                   href="/submit"
-                  className="w-full py-2.5 border border-[var(--border)] rounded-full text-sm font-semibold text-[var(--ink-900)] hover:bg-[var(--surface-50)] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full py-2.5 2xl:py-3 border border-[var(--border)] rounded-full text-sm 2xl:text-base font-semibold text-[var(--ink-900)] hover:bg-[var(--surface-50)] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Icon icon="solar:add-circle-linear" className="text-base" />
+                  <Icon icon="solar:add-circle-linear" className="text-base 2xl:text-lg" />
                   Start new thread
                 </Link>
               </div>

@@ -1,250 +1,212 @@
+"use client"
+
+import { useMemo, useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { Icon } from "@iconify/react"
-import { Input } from "@/components/ui/input"
+import { PageHeader } from "@/components/page-header"
+import { ProductMark, ProductStatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
-
-const recentActivity = [
-  {
-    id: "1",
-    user: "Alice Johnson",
-    email: "alice@example.com",
-    action: "Posted a new Property",
-    target: "Luxury Villa in Bole",
-    status: "Published",
-    time: "2 hours ago",
-    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d",
-  },
-  {
-    id: "2",
-    user: "Bob Smith",
-    email: "bob@example.com",
-    action: "Updated Testimonial",
-    target: "Service Review",
-    status: "Pending",
-    time: "5 hours ago",
-    avatar: "https://i.pravatar.cc/150?u=a04258a2462d826712d",
-  },
-  {
-    id: "3",
-    user: "Charlie Davis",
-    email: "charlie@example.com",
-    action: "Deleted Listing",
-    target: "Apartment in CMC",
-    status: "Removed",
-    time: "1 day ago",
-    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
-  },
-]
+import { comments as seedComments, kpis, products as seedProducts, type Product } from "@/lib/data"
+import { Icon } from "@iconify/react"
 
 export default function DashboardPage() {
+  const [queue, setQueue] = useState<Product[]>(() =>
+    seedProducts.filter((p) => p.status === "pending" || p.status === "scheduled")
+  )
+  const live = useMemo(
+    () => seedProducts.filter((p) => p.status === "live").sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)),
+    []
+  )
+  const flagged = seedComments.filter((c) => c.status === "flagged")
+
+  const decide = (id: string, status: Product["status"]) => {
+    setQueue((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)).filter((p) => p.status === "pending" || p.status === "scheduled"))
+  }
+
   return (
-    <div className="flex h-full w-full flex-col">
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border/50 bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <SidebarTrigger />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <div className="flex flex-1 items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">Dashboard Overview</h1>
-          <div className="flex items-center gap-4">
-            <div className="relative w-64 max-w-sm">
-              <Icon icon="lucide:search" className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search across admin..."
-                className="w-full rounded-lg bg-muted/50 pl-9 shadow-none border-border/50 focus-visible:ring-primary/50"
-              />
+    <div className="flex h-full min-h-0 w-full flex-col">
+      <PageHeader title="Today’s hunt" subtitle="Thursday 10 Sep 2026 · 12:01 AM EAT window" />
+
+      <main className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
+        <section className="relative overflow-hidden rounded-2xl border border-border bg-[#1A1815] text-[#FAF9F7] px-5 py-6 md:px-7 md:py-7">
+          <div className="pointer-events-none absolute -right-10 -top-16 size-56 rounded-full bg-[#FF6154]/30 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 right-24 size-40 rounded-full bg-amber-500/20 blur-3xl" />
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-xl space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#FF6154]">Launch day · Addis Ababa</p>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Four products on the board. Two still waiting on you.</h2>
+              <p className="text-sm text-[#DBD6CC]">
+                Review pending submissions before midnight EAT so they ship in tomorrow’s hunt, not next week’s archive.
+              </p>
             </div>
-            <Button size="icon" variant="ghost" className="rounded-full">
-              <Icon icon="lucide:bell" className="h-5 w-5 text-muted-foreground" />
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button render={<Link href="/products?filter=pending" />} className="rounded-full bg-[#FF6154] text-white hover:bg-[#ff4f40]">
+                Review queue
+              </Button>
+              <Button variant="outline" render={<Link href="/ads" />} className="rounded-full border-white/15 bg-white/5 text-[#FAF9F7] hover:bg-white/10">
+                Promotions
+              </Button>
+            </div>
           </div>
-        </div>
-      </header>
+        </section>
 
-      <main className="flex-1 overflow-auto p-6 md:p-8 space-y-8">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-card/50 backdrop-blur border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Properties</CardTitle>
-              <Icon icon="lucide:building-2" className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">1,245</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-emerald-500 font-medium inline-flex items-center gap-1">
-                  <Icon icon="lucide:trending-up" className="h-3 w-3" /> +12%
-                </span>{" "}
-                from last month
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card/50 backdrop-blur border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Users</CardTitle>
-              <Icon icon="lucide:users" className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">8,549</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-emerald-500 font-medium inline-flex items-center gap-1">
-                  <Icon icon="lucide:trending-up" className="h-3 w-3" /> +4.5%
-                </span>{" "}
-                from last month
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card/50 backdrop-blur border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approvals</CardTitle>
-              <Icon icon="lucide:file-clock" className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">34</div>
-              <p className="text-xs text-muted-foreground text-amber-500/80">
-                Requires attention
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card/50 backdrop-blur border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Page Views</CardTitle>
-              <Icon icon="lucide:activity" className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">+54,231</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-emerald-500 font-medium inline-flex items-center gap-1">
-                  <Icon icon="lucide:trending-up" className="h-3 w-3" /> +19%
-                </span>{" "}
-                from last week
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Kpi label="Live today" value={String(kpis.liveToday)} hint={kpis.liveDelta} icon="solar:rocket-linear" />
+          <Kpi label="Pending review" value={String(kpis.pendingReview)} hint={kpis.pendingDelta} icon="solar:hourglass-line-linear" accent />
+          <Kpi label="Upvotes today" value={kpis.upvotesToday.toLocaleString()} hint={kpis.upvoteDelta} icon="solar:round-alt-arrow-up-linear" />
+          <Kpi label="New hunters" value={String(kpis.newHunters)} hint={kpis.hunterDelta} icon="solar:users-group-rounded-linear" />
+        </section>
 
-        <div className="grid gap-4 md:grid-cols-7">
-          <Card className="col-span-7 lg:col-span-4 xl:col-span-5 bg-card/50 backdrop-blur border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between">
+        <section className="grid gap-4 xl:grid-cols-5">
+          <Card className="xl:col-span-3 border-border/80 shadow-none">
+            <CardHeader className="flex flex-row items-start justify-between gap-3">
               <div>
-                <CardTitle>Recent Content Activity</CardTitle>
-                <CardDescription>
-                  Latest updates on the Addis Hunt landing page.
-                </CardDescription>
+                <CardTitle className="text-base">Hunt board</CardTitle>
+                <CardDescription>Ranked live launches for 10 Sep 2026</CardDescription>
               </div>
-              <Button variant="outline" size="sm" className="hidden sm:flex border-border/50 bg-background/50">
-                View All
+              <Button variant="outline" size="sm" className="rounded-full" render={<Link href="/products" />}>
+                Manage
               </Button>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-md border border-border/50 bg-background/50">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border/50 hover:bg-transparent">
-                      <TableHead>User</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Target</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Time</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentActivity.map((activity) => (
-                      <TableRow key={activity.id} className="border-border/50 hover:bg-muted/30 transition-colors">
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8 border border-border/50">
-                              <AvatarImage src={activity.avatar} alt={activity.user} />
-                              <AvatarFallback>{activity.user.substring(0, 2).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                              <span className="text-sm">{activity.user}</span>
-                              <span className="text-xs text-muted-foreground hidden md:inline-block">{activity.email}</span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{activity.action}</TableCell>
-                        <TableCell>{activity.target}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="secondary" 
-                            className={
-                              activity.status === "Published" 
-                                ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20" 
-                                : activity.status === "Pending"
-                                ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20"
-                                : "bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20"
-                            }
-                          >
-                            {activity.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">{activity.time}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+            <CardContent className="space-y-2">
+              {live.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 rounded-xl border border-border/70 bg-background/60 px-3 py-2.5"
+                >
+                  <div className="w-7 text-center font-mono text-sm font-semibold text-muted-foreground">
+                    {p.rank}
+                  </div>
+                  <ProductMark initials={p.initials} accent={p.accent} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-semibold">{p.name}</span>
+                      {p.promoted ? (
+                        <span className="rounded-full bg-[#FF6154]/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#c2410c]">
+                          Promoted
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">{p.tagline}</p>
+                  </div>
+                  <div className="hidden items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-semibold sm:flex">
+                    <span className="upvote-tri text-[#FF6154]" />
+                    {p.votes}
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
-          
-          <Card className="col-span-7 lg:col-span-3 xl:col-span-2 bg-card/50 backdrop-blur border-border/50 flex flex-col">
+
+          <Card className="xl:col-span-2 border-border/80 shadow-none">
             <CardHeader>
-              <CardTitle>System Status</CardTitle>
-              <CardDescription>
-                Current health of the platform services.
-              </CardDescription>
+              <CardTitle className="text-base">Launch queue</CardTitle>
+              <CardDescription>Approve to ship at 12:01 AM EAT</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col gap-6 justify-start mt-2">
-               <div className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20 transition-colors border border-emerald-500/20">
-                      <Icon icon="lucide:database" className="h-5 w-5" />
+            <CardContent className="space-y-3">
+              {queue.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Queue is clear. Nice work.</p>
+              ) : (
+                queue.map((p) => (
+                  <div key={p.id} className="rounded-xl border border-border/70 p-3 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <ProductMark initials={p.initials} accent={p.accent} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-sm font-semibold">{p.name}</span>
+                          <ProductStatusBadge status={p.status} />
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground">{p.tagline}</p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {p.maker} · {p.launchDate}
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">Database</p>
-                      <p className="text-xs text-muted-foreground">Operational</p>
-                    </div>
+                    {p.status === "pending" ? (
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1 rounded-full" onClick={() => decide(p.id, "scheduled")}>
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1 rounded-full" onClick={() => decide(p.id, "rejected")}>
+                          Reject
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">Scheduled · no action needed</p>
+                    )}
                   </div>
-                  <div className="text-emerald-500">
-                    <Icon icon="lucide:check-circle-2" className="h-5 w-5" />
-                  </div>
-               </div>
-               <div className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20 transition-colors border border-emerald-500/20">
-                      <Icon icon="lucide:globe" className="h-5 w-5" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">Landing Page</p>
-                      <p className="text-xs text-muted-foreground">99.9% Uptime</p>
-                    </div>
-                  </div>
-                  <div className="text-emerald-500">
-                    <Icon icon="lucide:check-circle-2" className="h-5 w-5" />
-                  </div>
-               </div>
-               <div className="flex items-center justify-between group">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 group-hover:bg-amber-500/20 transition-colors border border-amber-500/20">
-                      <Icon icon="lucide:mail" className="h-5 w-5" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">Email Service</p>
-                      <p className="text-xs text-amber-500/80">High Latency</p>
-                    </div>
-                  </div>
-                  <div className="text-amber-500">
-                    <Icon icon="lucide:alert-circle" className="h-5 w-5" />
-                  </div>
-               </div>
+                ))
+              )}
             </CardContent>
           </Card>
-        </div>
+        </section>
+
+        <Card className="border-border/80 shadow-none">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Moderation</CardTitle>
+              <CardDescription>Flagged discussion that needs a human</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" className="rounded-full" render={<Link href="/comments" />}>
+              Open inbox
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-hidden rounded-xl border border-border/70">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Author</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Comment</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead className="text-right">When</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {flagged.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.author}</TableCell>
+                      <TableCell>{c.product}</TableCell>
+                      <TableCell className="max-w-sm truncate text-muted-foreground">{c.body}</TableCell>
+                      <TableCell className="text-amber-800">{c.reason}</TableCell>
+                      <TableCell className="text-right text-xs text-muted-foreground">{c.time}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
+  )
+}
+
+function Kpi({
+  label,
+  value,
+  hint,
+  icon,
+  accent,
+}: {
+  label: string
+  value: string
+  hint: string
+  icon: string
+  accent?: boolean
+}) {
+  return (
+    <Card className={`shadow-none border-border/80 ${accent ? "bg-[#FF6154]/8 border-[#FF6154]/20" : ""}`}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-xs font-medium text-muted-foreground">{label}</CardTitle>
+        <Icon icon={icon} className={`size-4 ${accent ? "text-[#FF6154]" : "text-muted-foreground"}`} />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-semibold tracking-tight">{value}</div>
+        <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>
+      </CardContent>
+    </Card>
   )
 }

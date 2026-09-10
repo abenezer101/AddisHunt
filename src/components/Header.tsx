@@ -34,14 +34,14 @@ export default function Header() {
   return (
     <>
       <header className="bg-[var(--bg)] border-b border-[var(--border)] sticky top-0 z-40">
-        <div className="flex justify-between items-center w-full px-6 max-w-[1240px] mx-auto h-16 gap-4">
+        <div className="page-container h-16 2xl:h-20 flex justify-between items-center gap-4 lg:gap-8">
           {/* Left: Brand logo + Search */}
-          <div className="flex items-center gap-4 flex-1 max-w-xl">
-            <Link href="/" className="flex items-center gap-2 shrink-0 group cursor-pointer">
-              <div className="w-10 h-10 rounded-full bg-[var(--ink-900)] text-[var(--bg)] font-bold text-xl flex items-center justify-center font-display tracking-tighter group-hover:opacity-90 transition-opacity">
+          <div className="flex items-center gap-4 flex-1 max-w-xl 2xl:max-w-2xl">
+            <Link href="/" className="flex items-center gap-2.5 shrink-0 group cursor-pointer">
+              <div className="w-10 h-10 2xl:w-11 2xl:h-11 rounded-full bg-[var(--ink-900)] text-[var(--bg)] font-bold text-xl 2xl:text-2xl flex items-center justify-center font-display tracking-tighter group-hover:opacity-90 transition-opacity">
                 A
               </div>
-              <span className="text-xl font-bold font-display text-[var(--ink-900)] tracking-tight hidden sm:inline-block">
+              <span className="text-xl 2xl:text-2xl font-bold font-display text-[var(--ink-900)] tracking-tight hidden sm:inline-block">
                 Addis Hunt
               </span>
             </Link>
@@ -50,11 +50,11 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
-              className="relative flex-1 max-w-md hidden sm:flex items-center justify-between bg-[var(--surface-50)] hover:bg-[var(--surface-100)] border border-transparent hover:border-[var(--border)] rounded-full pl-3.5 pr-3 py-2 text-sm text-[var(--ink-500)] transition-all cursor-pointer text-left"
+              className="relative flex-1 max-w-md 2xl:max-w-lg hidden sm:flex items-center justify-between bg-[var(--surface-50)] hover:bg-[var(--surface-100)] border border-transparent hover:border-[var(--border)] rounded-full pl-3.5 pr-3 py-2 2xl:py-2.5 text-sm text-[var(--ink-500)] transition-all cursor-pointer text-left"
             >
               <div className="flex items-center gap-2">
-                <Icon icon="solar:magnifer-linear" className="text-lg text-[var(--ink-500)]" />
-                <span className="text-sm text-[var(--ink-500)]">Search ( ctrl + k )</span>
+                <Icon icon="solar:magnifer-linear" className="text-lg 2xl:text-xl text-[var(--ink-500)]" />
+                <span className="text-sm 2xl:text-base text-[var(--ink-500)]">Search ( ctrl + k )</span>
               </div>
             </button>
           </div>
@@ -312,135 +312,141 @@ export default function Header() {
               </div>
             )}
 
-            {/* Submit button */}
-            <Link
-              href="/submit"
-              className="bg-[var(--ink-900)] text-[var(--bg)] px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-semibold hover:opacity-90 transition-opacity active:scale-95 duration-150 inline-flex items-center gap-1 cursor-pointer"
-            >
-              <Icon icon="solar:add-circle-linear" className="text-base" />
-              <span>Submit</span>
-            </Link>
-
-            {/* Clerk Auth Controls */}
+            {/* Clerk Auth & Action Controls */}
             {isSignedIn ? (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsProfileOpen(!isProfileOpen);
-                    setIsNotificationsOpen(false);
-                  }}
-                  className="relative w-9 h-9 rounded-full overflow-hidden border border-[var(--border)] hover:opacity-90 transition-opacity inline-flex shrink-0 cursor-pointer items-center justify-center bg-[var(--ink-900)]"
-                  aria-label="Account menu"
+              <>
+                {/* Submit button — directly navigates to /submit for signed-in users */}
+                <Link
+                  href="/submit"
+                  className="bg-[var(--ink-900)] text-[var(--bg)] px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-semibold hover:opacity-90 transition-opacity active:scale-95 duration-150 inline-flex items-center gap-1 cursor-pointer"
                 >
-                  {user?.imageUrl ? (
-                    <Image
-                      src={user.imageUrl}
-                      alt={user.fullName ?? "Profile"}
-                      width={36}
-                      height={36}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-[var(--bg)] text-sm font-bold">
-                      {user?.firstName?.[0] ?? user?.primaryEmailAddress?.emailAddress?.[0]?.toUpperCase() ?? "?"}
-                    </span>
+                  <Icon icon="solar:add-circle-linear" className="text-base" />
+                  <span>Submit</span>
+                </Link>
+
+                {/* Profile Avatar / Menu */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileOpen(!isProfileOpen);
+                      setIsNotificationsOpen(false);
+                    }}
+                    className="relative w-9 h-9 rounded-full overflow-hidden border border-[var(--border)] hover:opacity-90 transition-opacity inline-flex shrink-0 cursor-pointer items-center justify-center bg-[var(--ink-900)]"
+                    aria-label="Account menu"
+                  >
+                    {user?.imageUrl ? (
+                      <Image
+                        src={user.imageUrl}
+                        alt={user.fullName ?? "Profile"}
+                        width={36}
+                        height={36}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-[var(--bg)] text-sm font-bold">
+                        {user?.firstName?.[0] ?? user?.primaryEmailAddress?.emailAddress?.[0]?.toUpperCase() ?? "?"}
+                      </span>
+                    )}
+                  </button>
+
+                  {isProfileOpen && (
+                    <div className="absolute right-0 mt-2 w-60 bg-[var(--bg)] border border-[var(--border)] rounded-2xl shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-1">
+                      {/* User info */}
+                      <div className="p-2.5 border-b border-[var(--border)] flex items-center gap-3 mb-1">
+                        <div className="w-9 h-9 rounded-full overflow-hidden border border-[var(--border)] shrink-0 bg-[var(--ink-900)] flex items-center justify-center">
+                          {user?.imageUrl ? (
+                            <Image
+                              src={user.imageUrl}
+                              alt={user.fullName ?? ""}
+                              width={36}
+                              height={36}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[var(--bg)] text-xs font-bold">
+                              {user?.firstName?.[0] ?? "?"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="overflow-hidden">
+                          <div className="text-xs font-bold text-[var(--ink-900)] font-display truncate">
+                            {user?.fullName || user?.firstName || "Hunter"}
+                          </div>
+                          <div className="text-[11px] text-[var(--ink-500)] truncate">
+                            {user?.primaryEmailAddress?.emailAddress}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="py-1 space-y-0.5">
+                        <Link
+                          href={`/profile/${user?.username || user?.id}`}
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-50)] cursor-pointer transition-colors"
+                        >
+                          <Icon icon="solar:user-circle-linear" className="text-sm shrink-0" />
+                          View Profile
+                        </Link>
+                        <Link
+                          href="/submit"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-50)] cursor-pointer transition-colors"
+                        >
+                          <Icon icon="solar:box-linear" className="text-sm shrink-0" />
+                          My Submissions
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsProfileOpen(false);
+                            openUserProfile();
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-50)] cursor-pointer transition-colors"
+                        >
+                          <Icon icon="solar:settings-linear" className="text-sm shrink-0" />
+                          Account Settings
+                        </button>
+                      </div>
+
+                      <div className="border-t border-[var(--border)] mt-1 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsProfileOpen(false);
+                            signOut();
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
+                        >
+                          <Icon icon="solar:logout-2-linear" className="text-sm shrink-0" />
+                          Sign out
+                        </button>
+                      </div>
+                    </div>
                   )}
-                </button>
-
-                {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-60 bg-[var(--bg)] border border-[var(--border)] rounded-2xl shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-1">
-                    {/* User info */}
-                    <div className="p-2.5 border-b border-[var(--border)] flex items-center gap-3 mb-1">
-                      <div className="w-9 h-9 rounded-full overflow-hidden border border-[var(--border)] shrink-0 bg-[var(--ink-900)] flex items-center justify-center">
-                        {user?.imageUrl ? (
-                          <Image
-                            src={user.imageUrl}
-                            alt={user.fullName ?? ""}
-                            width={36}
-                            height={36}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-[var(--bg)] text-xs font-bold">
-                            {user?.firstName?.[0] ?? "?"}
-                          </span>
-                        )}
-                      </div>
-                      <div className="overflow-hidden">
-                        <div className="text-xs font-bold text-[var(--ink-900)] font-display truncate">
-                          {user?.fullName || user?.firstName || "Hunter"}
-                        </div>
-                        <div className="text-[11px] text-[var(--ink-500)] truncate">
-                          {user?.primaryEmailAddress?.emailAddress}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="py-1 space-y-0.5">
-                      <Link
-                        href={`/profile/${user?.username || user?.id}`}
-                        onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-50)] cursor-pointer transition-colors"
-                      >
-                        <Icon icon="solar:user-circle-linear" className="text-sm shrink-0" />
-                        View Profile
-                      </Link>
-                      <Link
-                        href="/submit"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-50)] cursor-pointer transition-colors"
-                      >
-                        <Icon icon="solar:box-linear" className="text-sm shrink-0" />
-                        My Submissions
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsProfileOpen(false);
-                          openUserProfile();
-                        }}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-50)] cursor-pointer transition-colors"
-                      >
-                        <Icon icon="solar:settings-linear" className="text-sm shrink-0" />
-                        Account Settings
-                      </button>
-                    </div>
-
-                    <div className="border-t border-[var(--border)] mt-1 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsProfileOpen(false);
-                          signOut();
-                        }}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
-                      >
-                        <Icon icon="solar:logout-2-linear" className="text-sm shrink-0" />
-                        Sign out
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              </>
             ) : (
+              /* When not signed in: Submit button (opens Sign-up modal) + Sign in button (opens Sign-in modal) */
               <div className="flex items-center gap-2">
+                <SignUpButton mode="modal">
+                  <button
+                    type="button"
+                    className="bg-[var(--ink-900)] text-[var(--bg)] px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-semibold hover:opacity-90 transition-opacity active:scale-95 duration-150 inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Icon icon="solar:add-circle-linear" className="text-base" />
+                    <span>Submit</span>
+                  </button>
+                </SignUpButton>
+
                 <SignInButton mode="modal">
                   <button
                     type="button"
-                    className="text-sm font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] transition-colors cursor-pointer px-3 py-1.5 rounded-full hover:bg-[var(--surface-50)]"
+                    className="text-xs sm:text-sm font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] transition-colors cursor-pointer px-3 py-2 rounded-full hover:bg-[var(--surface-50)]"
                   >
                     Sign in
                   </button>
                 </SignInButton>
-                <SignUpButton mode="modal">
-                  <button
-                    type="button"
-                    className="text-sm font-semibold text-[var(--bg)] bg-[var(--ink-900)] px-4 py-1.5 rounded-full hover:opacity-90 transition-opacity cursor-pointer"
-                  >
-                    Sign up
-                  </button>
-                </SignUpButton>
               </div>
             )}
 

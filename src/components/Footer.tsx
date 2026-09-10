@@ -57,7 +57,7 @@ const footerColumns = [
 export default function Footer() {
   return (
     <footer className="bg-[#0B1120] text-gray-300 border-t border-gray-800 mt-auto pt-12 sm:pt-16 pb-8">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+      <div className="page-container">
         {/* Top Newsletter & Brand bar */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-12 border-b border-gray-800">
           <div className="space-y-2 max-w-md">
