@@ -3,6 +3,7 @@ import { Hanken_Grotesk, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AdminGate } from "@/components/admin-gate"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -43,8 +44,10 @@ export default function RootLayout({
           >
             <TooltipProvider>
               <SidebarProvider>
-                <AppSidebar />
-                <SidebarInset className="overflow-hidden">{children}</SidebarInset>
+                <AdminGate>
+                  <AppSidebar />
+                  <SidebarInset className="overflow-hidden">{children}</SidebarInset>
+                </AdminGate>
               </SidebarProvider>
             </TooltipProvider>
           </ThemeProvider>

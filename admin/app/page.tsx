@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [commentsCount, setCommentsCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const fetchData = async () => {
     try {
@@ -46,16 +47,20 @@ export default function DashboardPage() {
 
   const decide = async (id: string, status: "approved" | "rejected") => {
     setActionLoadingId(id)
+    setActionError(null)
     try {
       const token = (await getToken({ template: "supabase" }).catch(() => null)) || (await getToken())
       const supabase = createClerkSupabaseClient(token)
-      const { error } = await supabase.from("startups").update({ status }).eq("id", id)
+      const { data, error } = await supabase.from("startups").update({ status }).eq("id", id).select("id")
 
-      if (!error) {
-        setStartups((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)))
+      if (error) throw new Error(error.message)
+      if (!data || data.length === 0) {
+        throw new Error("Update blocked by database permissions — your account is not in the admins list.")
       }
+      setStartups((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)))
     } catch (err) {
       console.error("Failed to update status:", err)
+      setActionError(err instanceof Error ? err.message : "Failed to update status. Please try again.")
     } finally {
       setActionLoadingId(null)
     }
@@ -66,6 +71,11 @@ export default function DashboardPage() {
       <PageHeader title="Today’s hunt" subtitle="Addis Hunt Admin Dashboard" />
 
       <main className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
+        {actionError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {actionError}
+          </div>
+        )}
         {/* Banner */}
         <section className="relative overflow-hidden rounded-2xl border border-border bg-[#1A1815] text-[#FAF9F7] px-5 py-6 md:px-7 md:py-7">
           <div className="pointer-events-none absolute -right-10 -top-16 size-56 rounded-full bg-[#FF6154]/30 blur-3xl" />

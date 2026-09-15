@@ -69,6 +69,12 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['comment_votes']['Insert']>;
         Relationships: [];
       };
+      admins: {
+        Row: { user_id: string; created_at: string | null };
+        Insert: { user_id: string; created_at?: string | null };
+        Update: Partial<Database['public']['Tables']['admins']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
