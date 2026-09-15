@@ -1,22 +1,23 @@
 "use client"
 
-import { Suspense, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import Image from "next/image"
+import Link from "next/link"
+import { useAuth } from "@clerk/nextjs"
 import { PageHeader } from "@/components/page-header"
-import { ProductMark, ProductStatusBadge } from "@/components/status-badge"
-import { products as seed, type Product, type ProductStatus } from "@/lib/data"
+import { createAnonSupabaseClient, createClerkSupabaseClient, type Database } from "@/lib/supabaseClient"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Icon } from "@iconify/react"
 
-const filters: { id: "all" | ProductStatus | "featured" | "promoted"; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "live", label: "Live" },
-  { id: "pending", label: "Pending" },
-  { id: "scheduled", label: "Scheduled" },
-  { id: "featured", label: "Featured" },
-  { id: "promoted", label: "Promoted" },
+type Startup = Database["public"]["Tables"]["startups"]["Row"]
+
+const filters = [
+  { id: "all", label: "All Products" },
+  { id: "approved", label: "Live / Approved" },
+  { id: "pending", label: "Pending Review" },
   { id: "rejected", label: "Rejected" },
 ]
 
@@ -30,36 +31,95 @@ export default function ProductsPage() {
 
 function ProductsInner() {
   const searchParams = useSearchParams()
-  const initial = (searchParams.get("filter") as (typeof filters)[number]["id"]) || "all"
-  const [filter, setFilter] = useState<(typeof filters)[number]["id"]>(
+  const { getToken } = useAuth()
+  const initial = searchParams.get("filter") || "all"
+  const [filter, setFilter] = useState<string>(
     filters.some((f) => f.id === initial) ? initial : "all"
   )
   const [query, setQuery] = useState("")
-  const [rows, setRows] = useState<Product[]>(seed)
+  const [products, setProducts] = useState<Startup[]>([])
+  const [loading, setLoading] = useState(true)
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+
+  const fetchProducts = async () => {
+    try {
+      const supabase = createAnonSupabaseClient()
+      const { data, error } = await supabase
+        .from("startups")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+      if (!error && data) {
+        setProducts(data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch products:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchProducts()
+  }, [])
 
   const visible = useMemo(() => {
-    return rows.filter((p) => {
+    return products.filter((p) => {
       const q = query.trim().toLowerCase()
       const matchesQuery =
         !q ||
         p.name.toLowerCase().includes(q) ||
-        p.maker.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q)
+        p.tagline.toLowerCase().includes(q) ||
+        (p.categories && p.categories.some((cat) => cat.toLowerCase().includes(q)))
+
       if (!matchesQuery) return false
       if (filter === "all") return true
-      if (filter === "featured") return p.featured
-      if (filter === "promoted") return p.promoted
       return p.status === filter
     })
-  }, [rows, filter, query])
+  }, [products, filter, query])
 
-  const patch = (id: string, next: Partial<Product>) => {
-    setRows((prev) => prev.map((p) => (p.id === id ? { ...p, ...next } : p)))
+  const updateStatus = async (id: string, status: "approved" | "rejected" | "pending") => {
+    setActionLoadingId(id)
+    try {
+      const token = (await getToken({ template: "supabase" }).catch(() => null)) || (await getToken())
+      const supabase = createClerkSupabaseClient(token)
+      const { error } = await supabase.from("startups").update({ status }).eq("id", id)
+
+      if (!error) {
+        setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)))
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err)
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  const deleteProduct = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to permanently delete "${name}"?`)) return
+
+    setActionLoadingId(id)
+    try {
+      const token = (await getToken({ template: "supabase" }).catch(() => null)) || (await getToken())
+      const supabase = createClerkSupabaseClient(token)
+      const { error } = await supabase.from("startups").delete().eq("id", id)
+
+      if (!error) {
+        setProducts((prev) => prev.filter((p) => p.id !== id))
+      }
+    } catch (err) {
+      console.error("Failed to delete product:", err)
+    } finally {
+      setActionLoadingId(null)
+    }
   }
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      <PageHeader title="Products" subtitle="Approve launches, feature homepage slots, sell promoted placement" />
+      <PageHeader
+        title="Products"
+        subtitle="Manage product submissions, review queue, and live startups"
+      />
       <main className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-1.5">
@@ -68,20 +128,27 @@ function ProductsInner() {
                 key={f.id}
                 type="button"
                 onClick={() => setFilter(f.id)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                   filter === f.id
                     ? "bg-[#1A1815] text-[#FAF9F7]"
                     : "border border-border bg-background text-foreground hover:bg-muted"
                 }`}
               >
-                {f.label}
+                {f.label}{" "}
+                <span className="opacity-70 font-mono text-[11px]">
+                  (
+                  {f.id === "all"
+                    ? products.length
+                    : products.filter((p) => p.status === f.id).length}
+                  )
+                </span>
               </button>
             ))}
           </div>
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter by name, maker, category"
+            placeholder="Search by name, tagline, or category..."
             className="h-9 max-w-xs rounded-full bg-background"
           />
         </div>
@@ -91,88 +158,137 @@ function ProductsInner() {
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Maker</TableHead>
+                <TableHead>Categories</TableHead>
                 <TableHead>Votes</TableHead>
+                <TableHead>Launch Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visible.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <ProductMark initials={p.initials} accent={p.accent} />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate font-medium">{p.name}</span>
-                          {p.featured ? (
-                            <Icon icon="solar:star-bold" className="size-3.5 text-amber-500" />
-                          ) : null}
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={6} className="py-4">
+                      <div className="h-6 rounded bg-muted animate-pulse" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : visible.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+                    No products found matching this filter.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                visible.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="relative size-10 rounded-xl overflow-hidden border border-border bg-muted shrink-0 flex items-center justify-center font-display font-bold text-sm">
+                          {p.logo_url ? (
+                            <Image
+                              src={p.logo_url}
+                              alt={p.name}
+                              fill
+                              className="object-cover"
+                              sizes="40px"
+                            />
+                          ) : (
+                            <span>{p.name?.[0]?.toUpperCase() ?? "?"}</span>
+                          )}
                         </div>
-                        <div className="truncate text-xs text-muted-foreground">{p.tagline}</div>
+                        <div className="min-w-0 max-w-sm">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate font-semibold">{p.name}</span>
+                            {p.url && (
+                              <a
+                                href={p.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-muted-foreground hover:text-foreground"
+                                title="Visit website"
+                              >
+                                <Icon icon="solar:export-linear" className="size-3" />
+                              </a>
+                            )}
+                          </div>
+                          <div className="truncate text-xs text-muted-foreground">{p.tagline}</div>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">{p.category}</TableCell>
-                  <TableCell className="text-sm">{p.maker}</TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center gap-1 text-sm font-semibold">
-                      <span className="upvote-tri text-[#FF6154]" />
-                      {p.votes}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <ProductStatusBadge status={p.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      {p.status === "pending" ? (
-                        <>
-                          <Button size="xs" className="rounded-full" onClick={() => patch(p.id, { status: "scheduled" })}>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {p.categories?.slice(0, 2).map((cat) => (
+                          <span
+                            key={cat}
+                            className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium"
+                          >
+                            {cat}
+                          </span>
+                        )) ?? <span className="text-xs text-muted-foreground">—</span>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold">
+                        <Icon icon="solar:arrow-up-linear" className="size-3 text-[#FF6154]" />
+                        {p.votes_count}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {p.launch_date || (p.created_at ? new Date(p.created_at).toLocaleDateString() : "—")}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+                          p.status === "approved"
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                            : p.status === "rejected"
+                            ? "bg-red-500/10 text-red-600 border border-red-500/20"
+                            : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                        }`}
+                      >
+                        {p.status ?? "pending"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end items-center gap-1.5">
+                        {p.status !== "approved" && (
+                          <Button
+                            size="xs"
+                            className="rounded-full cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={actionLoadingId === p.id}
+                            onClick={() => updateStatus(p.id, "approved")}
+                          >
                             Approve
                           </Button>
+                        )}
+                        {p.status !== "rejected" && (
                           <Button
                             size="xs"
                             variant="outline"
-                            className="rounded-full"
-                            onClick={() => patch(p.id, { status: "rejected" })}
+                            className="rounded-full cursor-pointer text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                            disabled={actionLoadingId === p.id}
+                            onClick={() => updateStatus(p.id, "rejected")}
                           >
                             Reject
                           </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            size="xs"
-                            variant={p.featured ? "secondary" : "outline"}
-                            className="rounded-full"
-                            onClick={() => patch(p.id, { featured: !p.featured })}
-                          >
-                            {p.featured ? "Unfeature" : "Feature"}
-                          </Button>
-                          <Button
-                            size="xs"
-                            variant={p.promoted ? "default" : "outline"}
-                            className="rounded-full"
-                            onClick={() => patch(p.id, { promoted: !p.promoted })}
-                          >
-                            {p.promoted ? "Promoted" : "Promote"}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {visible.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                    Nothing matches that filter.
-                  </TableCell>
-                </TableRow>
-              ) : null}
+                        )}
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          className="rounded-full cursor-pointer text-red-500 hover:text-red-700 hover:bg-red-50"
+                          disabled={actionLoadingId === p.id}
+                          onClick={() => deleteProduct(p.id, p.name)}
+                          title="Delete product"
+                        >
+                          <Icon icon="solar:trash-bin-trash-linear" className="size-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
@@ -8,54 +8,10 @@ import Image from "next/image";
 import { Icon } from "@/components/AppIcon";
 import Link from "next/link";
 import { UpvoteIcon, CommentIcon } from "@/components/Icons";
+import { createAnonSupabaseClient } from "@/lib/supabaseClient";
+import type { Database } from "@/lib/supabaseClient";
 
-const todayProducts = [
-  {
-    rank: 1,
-    name: "Tidaro",
-    tagline: "The all-in-one desk booking & office management tool for hybrid teams",
-    category: "Productivity",
-    tags: ["Hybrid Work", "Desk Booking", "SaaS"],
-    votes: 454,
-    comments: 48,
-    badge: "Promoted",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBCc_ilBidrsf3xEc0mzfIHSbzECMhOyipuPld9CxrwAwr8ZgpRLAbU2AJDVS7YJAgw6eSUNMelInTmDaSNnK7_m3OIiS03TEc1OTumF7BEOwVIQGJA3L8hlsYekh3WFv8aBSea0NY3WmAi5v_3CKOy-NU9iHll7bQQlFkIvaPdrEqWYAx_cMITNba5iTzix1IE0n_Fb_ZBAo1v6P_CO9ZF1Io0u9ezX08NaLI5XstC5kjQdkbXgbjPxg",
-    imageAlt: "Tidaro logo",
-  },
-  {
-    rank: 2,
-    name: "PayStream Africa",
-    tagline: "Seamless cross-border payments for modern African businesses",
-    category: "Fintech",
-    tags: ["Payments", "API", "B2B"],
-    votes: 432,
-    comments: 31,
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD1PLNEZWQ8-qSHyZ3Mk61jod-CZlGQk6-UM1kDhhSiKGOn6Jkn4Q1WldxbtmIN-kiORhMUF1Tl0deg4pZ012woozhZ5yMQit-l3gUfJ93ZUbfeaKH6x1MJvFAtmeJsB8uuZJiu75I0Nwi6WF4N61v6OKsHqEdvJdfyDuryY4iwQpggTi-u0ptuNUzoPJEADDXym6pxhpUI-GjoviIBwGPKE1rPlIvGrj5c22-Do75WlcRqxGpn8XBM6A",
-    imageAlt: "PayStream logo",
-  },
-  {
-    rank: 3,
-    name: "FarmSense AI",
-    tagline: "AI-driven crop yield predictions based on local soil data",
-    category: "Agritech",
-    tags: ["Artificial Intelligence", "Agritech", "Sensors"],
-    votes: 289,
-    comments: 26,
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAYLxPRPK1JHxdvSZ0LAwHA05SPWjesTi3js_C_x_i0cJ6w61Utr35xuPb0brDEF5zURCTvvfMR7O0DYMTlO_hmyO67iUp7IP6ti4ZQXw9STWrMXcKz-MCLy3ka4pkFe3h4MFDFsKWTYyC99YAgNS4_UzyrAUHvsTs516I4yQiF3tphATghvmyMG9RyS3oT9sTVYaeFW3ia-9_NVs3CbtbO6Vk7ji7Q3nkjPhCE0VNltOvSjYeq9bJlTg",
-    imageAlt: "FarmSense logo",
-  },
-  {
-    rank: 4,
-    name: "Interactive Sessions",
-    tagline: "Drive the full SDLC with AI agents, step by step",
-    category: "Developer Tools",
-    tags: ["Software Engineering", "Developer Tools", "AI"],
-    votes: 238,
-    comments: 83,
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDNMONhfLZ1yo3Bmq6uUIzqneAOPWirGjx0Pk8DnFwJysEVDCsTs75vG4DSG7OV5TqtjzPZRI-O36Nghf1R0nJkknNPSGf_uVAKmJJpc0PZLIO-qPJdrKY5RlzNEQRrMw6onZMl0J4xB3VZuWfLym9ISTcogo0wr_j3eNxsea0rghn-D3uuwxixD1JELn9YjnJ0DVum6RcdySoWbbyBaB_WHsU0gCSBHqnGVMVZHR8YmGa7Dib5clYVrA",
-    imageAlt: "Interactive Sessions logo",
-  },
-];
+type Startup = Database["public"]["Tables"]["startups"]["Row"];
 
 const forumThreads = [
   {
@@ -86,25 +42,7 @@ const forumThreads = [
   },
   {
     channel: "p/general",
-    title: "What’s the best tech stack for a fast MVP in 2026?",
-    upvotes: 395,
-    comments: 145,
-  },
-  {
-    channel: "p/general",
-    title: "What’s the best tech stack for a fast MVP in 2026?",
-    upvotes: 395,
-    comments: 145,
-  },
-  {
-    channel: "p/general",
-    title: "What’s the best tech stack for a fast MVP in 2026?",
-    upvotes: 395,
-    comments: 145,
-  },
-  {
-    channel: "p/general",
-    title: "What’s the best tech stack for a fast MVP in 2026?",
+    title: "What's the best tech stack for a fast MVP in 2026?",
     upvotes: 395,
     comments: 145,
   },
@@ -112,6 +50,35 @@ const forumThreads = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"featured" | "all">("featured");
+  const [products, setProducts] = useState<Startup[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createAnonSupabaseClient();
+    supabase
+      .from("startups")
+      .select("*")
+      .eq("status", "approved")
+      .order("votes_count", { ascending: false })
+      .limit(activeTab === "featured" ? 4 : 20)
+      .then(({ data, error }) => {
+        if (!error && data) setProducts(data);
+        setLoading(false);
+      });
+  }, [activeTab]);
+
+  const mappedProducts = products.map((p, i) => ({
+    rank: i + 1,
+    name: p.name,
+    tagline: p.tagline,
+    category: p.categories?.[0] ?? "General",
+    tags: p.categories ?? [],
+    votes: p.votes_count,
+    comments: 0,
+    image: p.logo_url ?? "",
+    imageAlt: `${p.name} logo`,
+    id: p.id,
+  }));
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--ink-900)] font-body antialiased">
@@ -157,9 +124,22 @@ export default function Home() {
 
             {/* Products List */}
             <div className="space-y-3.5 2xl:space-y-4">
-              {todayProducts.map((product) => (
-                <ProductCard key={product.name} product={product} />
-              ))}
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-20 rounded-xl bg-[var(--surface-50)] border border-[var(--border)] animate-pulse"
+                  />
+                ))
+              ) : mappedProducts.length === 0 ? (
+                <div className="text-center py-12 text-[var(--ink-400)] text-sm">
+                  No products yet. <Link href="/submit" className="underline text-[var(--ink-700)]">Be the first to submit!</Link>
+                </div>
+              ) : (
+                mappedProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))
+              )}
             </div>
 
             {/* Featured Banner Card */}
@@ -182,7 +162,7 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Right Sidebar (4 cols) — stretches to match full left column height */}
+          {/* Right Sidebar (4 cols) */}
           <aside className="lg:col-span-4 flex flex-col">
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between mb-5">
@@ -237,7 +217,7 @@ export default function Home() {
                   className="w-full py-2.5 2xl:py-3 border border-[var(--border)] rounded-full text-sm 2xl:text-base font-semibold text-[var(--ink-900)] hover:bg-[var(--surface-50)] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Icon icon="solar:add-circle-linear" className="text-base 2xl:text-lg" />
-                  Start new thread
+                  Submit a Product
                 </Link>
               </div>
             </div>

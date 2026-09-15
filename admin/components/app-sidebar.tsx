@@ -1,7 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { useUser } from "@clerk/nextjs"
 import {
   Sidebar,
   SidebarContent,
@@ -28,19 +30,19 @@ type NavItem = {
 
 const hunt: NavItem[] = [
   { title: "Dashboard", url: "/", icon: "solar:widget-2-linear" },
-  { title: "Products", url: "/products", icon: "solar:box-linear", badge: "2" },
+  { title: "Products", url: "/products", icon: "solar:box-linear" },
   { title: "Launch queue", url: "/products?filter=pending", icon: "solar:rocket-linear" },
-  { title: "Promotional", url: "/ads", icon: "solar:megaphone-linear" },
-  { title: "New campaign", url: "/ads?new=1", icon: "solar:add-circle-linear", accent: true },
 ]
 
 const community: NavItem[] = [
-  { title: "Users", url: "/users", icon: "solar:users-group-rounded-linear" },
-  { title: "Comments", url: "/comments", icon: "solar:chat-round-dots-linear", badge: "2" },
+  { title: "Comments", url: "/comments", icon: "solar:chat-round-dots-linear" },
   { title: "Categories", url: "/categories", icon: "solar:tag-linear" },
+  { title: "Users", url: "/users", icon: "solar:users-group-rounded-linear" },
 ]
 
-const ops: NavItem[] = [{ title: "Settings", url: "/settings", icon: "solar:settings-linear" }]
+const ops: NavItem[] = [
+  { title: "Settings", url: "/settings", icon: "solar:settings-linear" },
+]
 
 function NavItems({ items }: { items: NavItem[] }) {
   const pathname = usePathname()
@@ -49,15 +51,14 @@ function NavItems({ items }: { items: NavItem[] }) {
     <SidebarMenu>
       {items.map((item) => {
         const href = item.url.split("?")[0]
-        const isAction = item.url.includes("new=1")
-        const isActive = isAction ? false : href === "/" ? pathname === "/" : pathname === href
+        const isActive = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href)
         return (
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
               isActive={isActive}
               tooltip={item.title}
               render={<Link href={item.url} />}
-              className={`rounded-lg ${item.accent ? "text-[#c2410c] hover:text-[#c2410c]" : ""}`}
+              className={`rounded-lg cursor-pointer ${item.accent ? "text-[#c2410c] hover:text-[#c2410c]" : ""}`}
             >
               <Icon icon={item.icon} className="size-4" />
               <span>{item.title}</span>
@@ -71,10 +72,12 @@ function NavItems({ items }: { items: NavItem[] }) {
 }
 
 export function AppSidebar() {
+  const { user } = useUser()
+
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader className="px-3 py-4">
-        <Link href="/" className="flex items-center gap-2.5 px-1 group-data-[collapsible=icon]:justify-center">
+        <Link href="/" className="flex items-center gap-2.5 px-1 group-data-[collapsible=icon]:justify-center cursor-pointer">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#1A1815] text-[#FAF9F7] font-semibold tracking-tight">
             A
           </div>
@@ -107,12 +110,26 @@ export function AppSidebar() {
       <SidebarSeparator />
       <SidebarFooter className="p-3">
         <div className="flex items-center gap-2.5 rounded-xl border border-border/80 bg-background/70 px-2.5 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <div className="flex size-8 items-center justify-center rounded-full bg-[#1A1815] text-[11px] font-semibold text-[#FAF9F7]">
-            KT
+          <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#1A1815] text-[11px] font-semibold text-[#FAF9F7]">
+            {user?.imageUrl ? (
+              <Image
+                src={user.imageUrl}
+                alt={user.fullName ?? "User"}
+                width={32}
+                height={32}
+                className="size-full object-cover"
+              />
+            ) : (
+              <span>{user?.firstName?.[0] ?? "A"}</span>
+            )}
           </div>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <div className="truncate text-sm font-medium leading-tight">Kalkidan T.</div>
-            <div className="truncate text-[11px] text-muted-foreground">admin@addishunt.com</div>
+            <div className="truncate text-sm font-medium leading-tight">
+              {user?.fullName || user?.firstName || "Admin"}
+            </div>
+            <div className="truncate text-[11px] text-muted-foreground">
+              {user?.primaryEmailAddress?.emailAddress || "admin@addishunt.pro"}
+            </div>
           </div>
         </div>
       </SidebarFooter>

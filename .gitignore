@@ -32,9 +32,15 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env.local
+admin/.env.local
+admin/.env
 
 # vercel
 .vercel
+.opencode/
+./claude
+.agents/
 
 # typescript
 *.tsbuildinfo

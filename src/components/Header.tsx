@@ -103,14 +103,14 @@ export default function Header() {
                         className="flex items-center gap-2 p-2 rounded-xl hover:bg-[var(--surface-50)] transition-colors cursor-pointer text-xs font-semibold text-[var(--ink-900)]"
                       >
                         <Icon icon="solar:medal-ribbon-bold" className="text-sm text-[var(--ink-900)]" />
-                        Product of the Week
+                        Browse by Category
                       </Link>
                       <Link
-                        href="/categories"
+                        href="/launches"
                         className="flex items-center gap-2 p-2 rounded-xl hover:bg-[var(--surface-50)] transition-colors cursor-pointer text-xs font-semibold text-[var(--ink-900)]"
                       >
                         <Icon icon="solar:crown-star-bold" className="text-sm text-[var(--ink-900)]" />
-                        Hall of Fame
+                        Recent Launches
                       </Link>
                     </div>
 
@@ -123,21 +123,18 @@ export default function Header() {
                         className="flex items-center justify-between p-2 rounded-xl hover:bg-[var(--surface-50)] cursor-pointer text-xs text-[var(--ink-700)] hover:text-[var(--ink-900)] font-medium"
                       >
                         <span>Fintech & Payments</span>
-                        <span className="text-[10px] bg-[var(--surface-100)] px-1.5 py-0.5 rounded">42</span>
                       </Link>
                       <Link
                         href="/categories"
                         className="flex items-center justify-between p-2 rounded-xl hover:bg-[var(--surface-50)] cursor-pointer text-xs text-[var(--ink-700)] hover:text-[var(--ink-900)] font-medium"
                       >
                         <span>AI & ML Tools</span>
-                        <span className="text-[10px] bg-[var(--surface-100)] px-1.5 py-0.5 rounded">28</span>
                       </Link>
                       <Link
                         href="/categories"
                         className="flex items-center justify-between p-2 rounded-xl hover:bg-[var(--surface-50)] cursor-pointer text-xs text-[var(--ink-700)] hover:text-[var(--ink-900)] font-medium"
                       >
                         <span>Developer Tools</span>
-                        <span className="text-[10px] bg-[var(--surface-100)] px-1.5 py-0.5 rounded">19</span>
                       </Link>
                     </div>
                   </div>
@@ -176,40 +173,37 @@ export default function Header() {
                       className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-[var(--surface-50)] transition-colors cursor-pointer text-xs font-semibold text-[var(--ink-900)]"
                     >
                       <Icon icon="solar:rocket-bold" className="text-base text-[var(--ink-900)]" />
-                      <span>Launch Archive</span>
+                      <span>Recent Launches</span>
                     </Link>
                     <Link
-                      href="/launches"
+                      href="/help"
                       className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-[var(--surface-50)] transition-colors cursor-pointer text-xs font-semibold text-[var(--ink-900)]"
                     >
-                      <Icon icon="solar:calendar-date-bold" className="text-base text-[var(--ink-900)]" />
-                      <span>Upcoming Launches</span>
+                      <Icon icon="solar:checklist-minimalistic-bold" className="text-base text-[var(--ink-900)]" />
+                      <span>Launch Guide & Checklist</span>
                     </Link>
                     <Link
                       href="/submit"
                       className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-[var(--surface-50)] transition-colors cursor-pointer text-xs font-semibold text-[var(--ink-900)]"
                     >
-                      <Icon icon="solar:checklist-minimalistic-bold" className="text-base text-[var(--ink-900)]" />
-                      <span>Launch Guide & Checklist</span>
+                      <Icon icon="solar:calendar-date-bold" className="text-base text-[var(--ink-900)]" />
+                      <span>Submit Your Startup</span>
                     </Link>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 3. News & For you */}
+            {/* 3. Help */}
             <Link
-              href="/"
-              className="text-sm font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] transition-colors cursor-pointer"
+              href="/help"
+              className={`text-sm font-medium transition-colors cursor-pointer ${
+                pathname === "/help"
+                  ? "text-[var(--ink-900)] font-semibold"
+                  : "text-[var(--ink-700)] hover:text-[var(--ink-900)]"
+              }`}
             >
-              News
-            </Link>
-
-            <Link
-              href="/"
-              className="text-sm font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] transition-colors cursor-pointer"
-            >
-              For you
+              Help
             </Link>
 
             {/* 4. Advertise Dropdown */}
@@ -238,27 +232,33 @@ export default function Header() {
               {activeDropdown === "advertise" && (
                 <div className="absolute top-full right-0 pt-2 w-[300px] animate-in fade-in slide-in-from-top-1 duration-150 z-50">
                   <div className="bg-[var(--bg)] border border-[var(--border)] rounded-2xl shadow-xl p-3 space-y-1">
-                    <Link
-                      href="/submit"
+                    <a
+                      href="https://t.me/abenii11bot"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-[var(--surface-50)] cursor-pointer text-xs text-[var(--ink-900)] font-semibold"
                     >
                       <Icon icon="solar:stars-minimalistic-bold" className="text-sm" />
-                      <span>Promoted Top Placement</span>
-                    </Link>
-                    <Link
-                      href="/submit"
+                      <span>Advertise with Us</span>
+                    </a>
+                    <a
+                      href="https://lecturaai.com/?utm_source=addishunt"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-[var(--surface-50)] cursor-pointer text-xs text-[var(--ink-900)] font-semibold"
                     >
                       <Icon icon="solar:letter-bold" className="text-sm" />
-                      <span>Newsletter Sponsorship</span>
-                    </Link>
-                    <Link
-                      href="/submit"
+                      <span>Lectura AI</span>
+                    </a>
+                    <a
+                      href="https://prepl.me/?utm_source=addishunt"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-[var(--surface-50)] cursor-pointer text-xs text-[var(--ink-900)] font-semibold"
                     >
                       <Icon icon="solar:graph-up-bold" className="text-sm" />
-                      <span>Media Kit & Pricing</span>
-                    </Link>
+                      <span>Prepl</span>
+                    </a>
                   </div>
                 </div>
               )}
@@ -389,7 +389,7 @@ export default function Header() {
                           View Profile
                         </Link>
                         <Link
-                          href="/submit"
+                          href={`/profile/${user?.username || user?.id}`}
                           onClick={() => setIsProfileOpen(false)}
                           className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium text-[var(--ink-700)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-50)] cursor-pointer transition-colors"
                         >
@@ -518,13 +518,23 @@ export default function Header() {
                 <Icon icon="solar:alt-arrow-right-linear" />
               </Link>
               <Link
-                href="/profile/kalkidandesigns"
+                href="/help"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="flex items-center justify-between p-2 rounded-xl hover:bg-[var(--surface-50)] text-[var(--ink-900)] cursor-pointer"
               >
-                <span>Profile</span>
+                <span>Help Center</span>
                 <Icon icon="solar:alt-arrow-right-linear" />
               </Link>
+              {isSignedIn ? (
+                <Link
+                  href={`/profile/${user?.username || user?.id}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center justify-between p-2 rounded-xl hover:bg-[var(--surface-50)] text-[var(--ink-900)] cursor-pointer"
+                >
+                  <span>Profile</span>
+                  <Icon icon="solar:alt-arrow-right-linear" />
+                </Link>
+              ) : null}
             </div>
           </div>
         )}

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Icon } from "@iconify/react"
 
 export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
@@ -69,10 +70,15 @@ export default function SettingsPage() {
           </Card>
 
           <div className="flex items-center gap-3">
-            <Button type="submit" className="rounded-full">
-              Save settings
+            <Button type="submit" className="rounded-full cursor-pointer">
+              Save Settings
             </Button>
-            {saved ? <span className="text-sm text-emerald-700">Saved locally — wire this to Supabase next.</span> : null}
+            {saved ? (
+              <span className="text-sm text-emerald-600 font-medium inline-flex items-center gap-1">
+                <Icon icon="solar:check-circle-bold" className="size-4" />
+                Settings saved successfully
+              </span>
+            ) : null}
           </div>
         </form>
       </main>

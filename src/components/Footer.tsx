@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/AppIcon";
 
-const footerColumns = [
+const footerColumns: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
   {
     title: "Top Categories",
     links: [
@@ -19,37 +19,26 @@ const footerColumns = [
   {
     title: "Community",
     links: [
-      { label: "Trending Discussions", href: "/" },
       { label: "Upcoming Launches", href: "/launches" },
-      { label: "Top Hunters Leaderboard", href: "/profile/kalkidandesigns" },
-      { label: "Maker Directory", href: "/profile/kalkidandesigns" },
-      { label: "Launch Guide & Checklist", href: "/submit" },
-      { label: "Addis Tech Events 2026", href: "/" },
-      { label: "Telegram Community", href: "https://t.me", external: true },
+      { label: "Submit Your Startup", href: "/submit" },
+      { label: "Launch Guide & Checklist", href: "/help" },
     ],
   },
   {
     title: "Advertise & Partners",
     links: [
-      { label: "Advertise with Us", href: "/submit" },
-      { label: "Promoted Placements", href: "/submit" },
-      { label: "Newsletter Sponsorship", href: "/submit" },
-      { label: "Media Kit & Pricing", href: "/submit" },
-      { label: "Venture & Angels Club", href: "/" },
-      { label: "Startup Act", href: "/" },
-      { label: "Brand Assets", href: "/" },
+      { label: "Advertise with Us", href: "https://t.me/abenii11bot", external: true },
+      { label: "Lectura AI", href: "https://lecturaai.com/?utm_source=addishunt", external: true },
+      { label: "Prepl", href: "https://prepl.me/?utm_source=addishunt", external: true },
     ],
   },
   {
     title: "Help & Legal",
     links: [
-      { label: "Help Center & FAQ", href: "/" },
-      { label: "Community Guidelines", href: "/" },
-      { label: "Terms of Service", href: "/" },
-      { label: "Privacy Policy", href: "/" },
-      { label: "Security & Trust", href: "/" },
-      { label: "Cookie Preferences", href: "/" },
-      { label: "Contact Support", href: "/" },
+      { label: "Help Center & FAQ", href: "/help" },
+      { label: "Community Guidelines", href: "/guidelines" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
     ],
   },
 ];

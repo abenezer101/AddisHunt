@@ -125,6 +125,33 @@ const paths: Record<string, ReactElement> = {
   ),
   bold: <path d="M7 4h6a4 4 0 0 1 0 8H7zm0 8h7a4 4 0 0 1 0 8H7z" />,
   italic: <path d="M15 4h4M11 4H7m4 0 2 16m-2 0h-4m8 0h4" />,
+  pen: (
+    <>
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </>
+  ),
+  chat: (
+    <>
+      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </>
+  ),
+  arrowUp: <path d="M12 19V5M5 12l7-7 7 7" />,
+  logout: (
+    <>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+    </>
+  ),
+  loading: (
+    <>
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </>
+  ),
 };
 
 const alias: Record<string, string> = {
@@ -161,6 +188,14 @@ const alias: Record<string, string> = {
   "solar:settings-linear": "settings",
   "solar:text-bold-linear": "bold",
   "solar:text-italic-linear": "italic",
+  "solar:pen-2-outline": "pen",
+  "solar:pen-linear": "pen",
+  "solar:chat-line-linear": "chat",
+  "solar:trash-bin-trash-linear": "trash",
+  "solar:arrow-up-linear": "arrowUp",
+  "solar:arrow-up-bold": "arrowUp",
+  "solar:logout-2-linear": "logout",
+  "solar:loading-bold": "loading",
   "ri:linkedin-fill": "box",
   "ri:telegram-fill": "share",
   "ri:github-fill": "box",

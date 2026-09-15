@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@/components/AppIcon";
+import { useSession, useUser, useClerk } from "@clerk/nextjs";
+import { createClerkSupabaseClient } from "@/lib/supabaseClient";
 
 const steps = [
   { number: 1, label: "Basic Info" },
@@ -28,17 +30,29 @@ const availableCategories = [
 ];
 
 export default function SubmitPage() {
+  const router = useRouter();
+  const { session } = useSession();
+  const { user, isLoaded } = useUser();
+  const { openSignIn } = useClerk();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState({
-    name: "AfroPulse AI",
-    url: "https://afropulse.ai",
-    tagline: "Voice-first multilingual customer service for African languages",
-    description:
-      "AfroPulse AI enables businesses to automate voice and text support in Amharic, Oromo, Tigrinya, Swahili, and English with local dialect intelligence and real-time speech-to-text.",
+    name: "",
+    url: "",
+    tagline: "",
+    description: "",
     pricingModel: "Free Tier",
-    twitterHandle: "@afropulse_ai",
-    selectedCategories: ["AI & ML", "Productivity"],
+    twitterHandle: "",
+    selectedCategories: [] as string[],
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -56,22 +70,176 @@ export default function SubmitPage() {
     });
   };
 
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Logo must be below 5MB.");
+      return;
+    }
+    setError(null);
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
+  const MAX_GALLERY = 5;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    // Reset input so the same file can be re-picked after removal
+    e.target.value = "";
+
+    const remaining = MAX_GALLERY - galleryFiles.length;
+    if (remaining <= 0) {
+      setError(`You can upload max ${MAX_GALLERY} demo screenshots.`);
+      return;
+    }
+
+    const accepted: File[] = [];
+    for (const file of files.slice(0, remaining)) {
+      if (!file.type.startsWith("image/")) continue;
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`"${file.name}" is over 5MB and was skipped.`);
+        continue;
+      }
+      accepted.push(file);
+    }
+
+    if (files.length > remaining) {
+      setError(`Only ${remaining} more image(s) allowed (max ${MAX_GALLERY}).`);
+    } else if (accepted.length > 0) {
+      setError(null);
+    }
+
+    if (accepted.length === 0) return;
+    setGalleryFiles((prev) => [...prev, ...accepted]);
+    setGalleryPreviews((prev) => [...prev, ...accepted.map((f) => URL.createObjectURL(f))]);
+  };
+
+  const handleGalleryRemove = (index: number) => {
+    setGalleryFiles((prev) => prev.filter((_, i) => i !== index));
+    setGalleryPreviews((prev) => {
+      const url = prev[index];
+      if (url) URL.revokeObjectURL(url);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
   const handleNext = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
-    }
+    if (currentStep < steps.length) setCurrentStep(currentStep + 1);
   };
-
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session || !user) {
+      setError("You must be signed in to submit a product.");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const token = await session.getToken();
+      const supabase = createClerkSupabaseClient(async () => token);
+
+      // Upload logo if provided
+      let logoUrl: string | null = null;
+      if (logoFile) {
+        const ext = logoFile.name.split(".").pop();
+        const path = `${user.id}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(path, logoFile, { upsert: true });
+
+        if (uploadError) throw new Error(`Logo upload failed: ${uploadError.message}`);
+
+        const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+        logoUrl = urlData.publicUrl;
+      }
+
+      // Upload gallery screenshots (max 5, each <5MB) — reuses product-images bucket
+      const galleryUrls: string[] = [];
+      for (let i = 0; i < galleryFiles.length; i++) {
+        const file = galleryFiles[i];
+        const ext = file.name.split(".").pop();
+        const path = `${user.id}/gallery/${Date.now()}-${i}.${ext}`;
+        const { error: galleryError } = await supabase.storage
+          .from("product-images")
+          .upload(path, file, { upsert: true });
+
+        if (galleryError) throw new Error(`Screenshot ${i + 1} upload failed: ${galleryError.message}`);
+
+        const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+        galleryUrls.push(urlData.publicUrl);
+      }
+
+      // Insert startup
+      const { data, error: insertError } = await supabase
+        .from("startups")
+        .insert({
+          name: formData.name,
+          tagline: formData.tagline,
+          description: formData.description,
+          url: formData.url,
+          logo_url: logoUrl,
+          founder_id: user.id,
+          status: "pending",
+          categories: formData.selectedCategories,
+          pricing_model: formData.pricingModel,
+          twitter_handle: formData.twitterHandle || null,
+          gallery_urls: galleryUrls,
+          launch_date: new Date().toISOString().split("T")[0],
+          votes_count: 0,
+        })
+        .select("id")
+        .single();
+
+      if (insertError) throw new Error(insertError.message);
+
+      setSubmittedId(data.id);
+      setIsSubmitted(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitted(true);
-  };
+  if (isLoaded && !user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--ink-900)] font-body antialiased">
+        <Header />
+        <main className="flex-grow w-full max-w-[500px] mx-auto px-4 sm:px-6 py-16 flex flex-col items-center justify-center">
+          <div className="w-full bg-[var(--surface-50)] border border-[var(--border)] rounded-2xl p-8 sm:p-10 text-center space-y-6 shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-[var(--ink-900)] text-[var(--bg)] flex items-center justify-center mx-auto text-3xl font-display font-bold">
+              A
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-bold font-display text-[var(--ink-900)]">
+                Authentication Required
+              </h1>
+              <p className="text-sm text-[var(--ink-500)] max-w-sm mx-auto">
+                You need to be signed in to submit a new product and launch it on Addis Hunt.
+              </p>
+            </div>
+            <button
+              onClick={() => openSignIn()}
+              className="w-full py-3 px-5 bg-[var(--ink-900)] text-[var(--bg)] rounded-xl text-sm font-bold font-display hover:opacity-90 transition-opacity shadow-sm cursor-pointer inline-flex items-center justify-center gap-2"
+            >
+              <Icon icon="solar:user-circle-linear" className="text-lg" />
+              Sign in to Continue
+            </button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--ink-900)] font-body antialiased">
@@ -85,19 +253,21 @@ export default function SubmitPage() {
             </div>
             <div className="space-y-2">
               <h1 className="text-2xl sm:text-3xl font-bold font-display text-[var(--ink-900)]">
-                Launch Scheduled! 🚀
+                Submission Received! 🚀
               </h1>
               <p className="text-sm text-[var(--ink-500)] max-w-md mx-auto">
-                <strong>{formData.name}</strong> is queued to launch on Addis Hunt tomorrow at 12:01 AM EAT. Check your email for your maker kit.
+                <strong>{formData.name}</strong> has been submitted for review. It will appear publicly once approved.
               </p>
             </div>
             <div className="flex items-center justify-center gap-3 pt-4">
-              <Link
-                href="/product/1"
-                className="px-6 py-2.5 bg-[var(--ink-900)] text-[var(--bg)] rounded-full text-xs font-bold font-display hover:opacity-90"
-              >
-                View Preview Page
-              </Link>
+              {submittedId && (
+                <Link
+                  href={`/product/${submittedId}`}
+                  className="px-6 py-2.5 bg-[var(--ink-900)] text-[var(--bg)] rounded-full text-xs font-bold font-display hover:opacity-90"
+                >
+                  View Product Page
+                </Link>
+              )}
               <Link
                 href="/"
                 className="px-6 py-2.5 border border-[var(--border)] bg-[var(--bg)] rounded-full text-xs font-bold font-display text-[var(--ink-900)] hover:bg-[var(--surface-100)]"
@@ -108,17 +278,17 @@ export default function SubmitPage() {
           </div>
         ) : (
           <div className="w-full flex flex-col gap-y-8 sm:gap-y-10">
-            {/* Header Section */}
+            {/* Header */}
             <div className="text-center space-y-2">
               <h1 className="text-2xl sm:text-3xl font-bold font-display text-[var(--ink-900)] tracking-tight">
                 Submit a Product to Addis Hunt
               </h1>
               <p className="text-xs sm:text-sm text-[var(--ink-500)] max-w-lg mx-auto">
-                Join 500+ Ethiopian founders showcasing their products to tech enthusiasts, angels, and prospective customers.
+                Join Ethiopian founders showcasing their products to tech enthusiasts, angels, and prospective customers.
               </p>
             </div>
 
-            {/* Stepper matching Product Hunt */}
+            {/* Stepper */}
             <div className="w-full flex items-center justify-between relative px-2 sm:px-6">
               <div className="absolute left-6 right-6 top-4 h-0.5 bg-[var(--border)] -z-0"></div>
               {steps.map((step, index) => (
@@ -149,6 +319,13 @@ export default function SubmitPage() {
               ))}
             </div>
 
+            {/* Error Banner */}
+            {error && (
+              <div className="w-full p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
             {/* Form Card */}
             <form
               onSubmit={handleSubmit}
@@ -168,11 +345,10 @@ export default function SubmitPage() {
                         value={formData.name}
                         onChange={handleInputChange}
                         className="w-full bg-[var(--bg)] border border-[var(--border)] text-sm px-4 py-2.5 rounded-xl text-[var(--ink-900)] focus:outline-none focus:border-[var(--ink-900)]"
-                        placeholder="e.g. Takata or PayStream"
+                        placeholder="e.g. BirrPay or AgriSense"
                         required
                       />
                     </div>
-
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold font-display text-[var(--ink-900)] uppercase tracking-wider">
                         Website URL <span className="text-red-500">*</span>
@@ -188,7 +364,6 @@ export default function SubmitPage() {
                       />
                     </div>
                   </div>
-
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold font-display text-[var(--ink-900)] uppercase tracking-wider">
                       Catchy Tagline <span className="text-red-500">*</span>
@@ -200,7 +375,7 @@ export default function SubmitPage() {
                       value={formData.tagline}
                       onChange={handleInputChange}
                       className="w-full bg-[var(--bg)] border border-[var(--border)] text-sm px-4 py-2.5 rounded-xl text-[var(--ink-900)] focus:outline-none focus:border-[var(--ink-900)]"
-                      placeholder="Concise, one-sentence description (max 70 characters)"
+                      placeholder="Concise, one-sentence description (max 70 chars)"
                       required
                     />
                     <div className="text-[11px] text-[var(--ink-400)] flex justify-between">
@@ -208,7 +383,6 @@ export default function SubmitPage() {
                       <span>{formData.tagline.length} / 70</span>
                     </div>
                   </div>
-
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold font-display text-[var(--ink-900)] uppercase tracking-wider">
                       Description & Story
@@ -230,35 +404,83 @@ export default function SubmitPage() {
                 <div className="space-y-6 animate-in fade-in duration-150">
                   <div className="space-y-2">
                     <label className="text-xs font-bold font-display text-[var(--ink-900)] uppercase tracking-wider">
-                      Product Logo (Square 240x240 recommended)
+                      Product Logo (Square 240×240 recommended)
                     </label>
-                    <div className="flex items-center gap-4 p-4 rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg)]">
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white font-bold flex items-center justify-center text-xl shrink-0">
-                        {formData.name.charAt(0) || "A"}
-                      </div>
+                    <div
+                      className="flex items-center gap-4 p-4 rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg)] cursor-pointer hover:bg-[var(--surface-50)] transition-colors"
+                      onClick={() => logoInputRef.current?.click()}
+                    >
+                      {logoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoPreview} alt="Logo preview" className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white font-bold flex items-center justify-center text-xl shrink-0">
+                          {formData.name.charAt(0) || "A"}
+                        </div>
+                      )}
                       <div className="space-y-1 text-xs text-[var(--ink-500)]">
-                        <div className="font-semibold text-[var(--ink-900)]">Logo preview generated from initials</div>
-                        <div>PNG, JPG, or SVG up to 5MB.</div>
+                        <div className="font-semibold text-[var(--ink-900)]">
+                          {logoFile ? logoFile.name : "Click to upload your logo"}
+                        </div>
+                        <div>PNG, JPG, WebP or SVG up to 5MB.</div>
                       </div>
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoSelect}
+                      />
                     </div>
                   </div>
-
                   <div className="space-y-2">
                     <label className="text-xs font-bold font-display text-[var(--ink-900)] uppercase tracking-wider">
-                      Product Gallery / Screenshots
+                      App Demo Screenshots (up to 5, each below 5MB)
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      <div className="relative aspect-video rounded-xl overflow-hidden border border-[var(--border)] bg-zinc-900 flex items-center justify-center p-2 text-center text-xs text-white">
-                        <span>Slide 1: Hero Banner</span>
+                    <div
+                      className="p-4 rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg)] cursor-pointer hover:bg-[var(--surface-50)] transition-colors"
+                      onClick={() => galleryInputRef.current?.click()}
+                    >
+                      <div className="flex items-center gap-3 text-xs text-[var(--ink-500)]">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--surface-100)] flex items-center justify-center shrink-0">
+                          <Icon icon="solar:camera-add-linear" className="text-lg text-[var(--ink-700)]" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-[var(--ink-900)]">
+                            {galleryFiles.length > 0
+                              ? `${galleryFiles.length} / 5 screenshots selected`
+                              : "Click to upload demo screenshots"}
+                          </div>
+                          <div>PNG, JPG or WebP — shown in the product gallery carousel.</div>
+                        </div>
                       </div>
-                      <div className="relative aspect-video rounded-xl overflow-hidden border border-[var(--border)] bg-zinc-800 flex items-center justify-center p-2 text-center text-xs text-white">
-                        <span>Slide 2: Dashboard Preview</span>
-                      </div>
-                      <div className="border border-dashed border-[var(--border)] bg-[var(--bg)] rounded-xl flex flex-col items-center justify-center p-4 text-center cursor-pointer hover:bg-[var(--surface-100)] transition-colors">
-                        <Icon icon="solar:camera-add-linear" className="text-2xl text-[var(--ink-400)] mb-1" />
-                        <span className="text-[11px] font-bold text-[var(--ink-700)]">+ Add Screenshot</span>
-                      </div>
+                      <input
+                        ref={galleryInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleGallerySelect}
+                      />
                     </div>
+                    {galleryPreviews.length > 0 && (
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1">
+                        {galleryPreviews.map((src, i) => (
+                          <div key={src} className="relative group rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--surface-100)] aspect-video">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={src} alt={`Screenshot ${i + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleGalleryRemove(i)}
+                              aria-label={`Remove screenshot ${i + 1}`}
+                              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -290,7 +512,6 @@ export default function SubmitPage() {
                       })}
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold font-display text-[var(--ink-900)] uppercase tracking-wider">
@@ -308,7 +529,6 @@ export default function SubmitPage() {
                         <option value="Open Source">Open Source</option>
                       </select>
                     </div>
-
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold font-display text-[var(--ink-900)] uppercase tracking-wider">
                         Maker Twitter / X Handle
@@ -331,36 +551,46 @@ export default function SubmitPage() {
                 <div className="space-y-5 animate-in fade-in duration-150">
                   <div className="p-4 rounded-xl bg-[var(--bg)] border border-[var(--border)] space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white font-bold flex items-center justify-center text-lg shrink-0">
-                        {formData.name.charAt(0) || "A"}
-                      </div>
+                      {logoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoPreview} alt="Logo" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-500 text-white font-bold flex items-center justify-center text-lg shrink-0">
+                          {formData.name.charAt(0) || "A"}
+                        </div>
+                      )}
                       <div>
-                        <div className="text-base font-bold font-display text-[var(--ink-900)]">{formData.name}</div>
-                        <div className="text-xs text-[var(--ink-500)]">{formData.tagline}</div>
+                        <div className="text-base font-bold font-display text-[var(--ink-900)]">{formData.name || "—"}</div>
+                        <div className="text-xs text-[var(--ink-500)]">{formData.tagline || "—"}</div>
                       </div>
                     </div>
-
                     <div className="text-xs text-[var(--ink-700)] leading-relaxed pt-2 border-t border-[var(--border)]">
-                      {formData.description}
+                      {formData.description || "No description provided."}
                     </div>
-
+                    {galleryPreviews.length > 0 && (
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
+                        {galleryPreviews.map((src, i) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={src} src={src} alt={`Screenshot ${i + 1}`} className="w-16 h-10 rounded-lg object-cover border border-[var(--border)]" />
+                        ))}
+                        <span className="text-[11px] text-[var(--ink-500)]">
+                          {galleryPreviews.length} screenshot{galleryPreviews.length > 1 ? "s" : ""}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 pt-1 flex-wrap">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                         {formData.pricingModel}
                       </span>
                       {formData.selectedCategories.map((c) => (
-                        <span
-                          key={c}
-                          className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[var(--surface-100)] text-[var(--ink-700)]"
-                        >
+                        <span key={c} className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[var(--surface-100)] text-[var(--ink-700)]">
                           {c}
                         </span>
                       ))}
                     </div>
                   </div>
-
                   <div className="text-xs text-[var(--ink-500)] p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                    ⚡ By launching on Addis Hunt, your product will receive featured newsletter placement, social media promotion on X & Telegram, and real-time upvotes from founders.
+                    ⚡ Your submission will be reviewed before going live. You&apos;ll receive featured placement, social promotion on X & Telegram, and real-time upvotes from the community.
                   </div>
                 </div>
               )}
@@ -378,12 +608,12 @@ export default function SubmitPage() {
                 ) : (
                   <div></div>
                 )}
-
                 {currentStep < steps.length ? (
                   <button
                     type="button"
                     onClick={handleNext}
-                    className="px-6 py-2.5 bg-[var(--ink-900)] text-[var(--bg)] rounded-full text-xs font-bold font-display hover:opacity-90 transition-all flex items-center gap-1.5 shadow-sm"
+                    disabled={currentStep === 1 && (!formData.name || !formData.url || !formData.tagline)}
+                    className="px-6 py-2.5 bg-[var(--ink-900)] text-[var(--bg)] rounded-full text-xs font-bold font-display hover:opacity-90 transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-40"
                   >
                     <span>Continue to Step {currentStep + 1}</span>
                     <Icon icon="solar:alt-arrow-right-linear" />
@@ -391,10 +621,20 @@ export default function SubmitPage() {
                 ) : (
                   <button
                     type="submit"
-                    className="px-7 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-full text-xs font-bold font-display hover:opacity-95 transition-all flex items-center gap-1.5 shadow-md shadow-orange-500/20"
+                    disabled={isSubmitting}
+                    className="px-7 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-full text-xs font-bold font-display hover:opacity-95 transition-all flex items-center gap-1.5 shadow-md shadow-orange-500/20 disabled:opacity-60"
                   >
-                    <Icon icon="solar:rocket-bold" />
-                    <span>Launch on Addis Hunt</span>
+                    {isSubmitting ? (
+                      <>
+                        <Icon icon="solar:loading-bold" className="animate-spin" />
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icon icon="solar:rocket-bold" />
+                        <span>Launch on Addis Hunt</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
