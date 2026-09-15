@@ -40,6 +40,7 @@ function ProductsInner() {
   const [products, setProducts] = useState<Startup[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const fetchProducts = async () => {
     try {
@@ -80,16 +81,20 @@ function ProductsInner() {
 
   const updateStatus = async (id: string, status: "approved" | "rejected" | "pending") => {
     setActionLoadingId(id)
+    setActionError(null)
     try {
       const token = (await getToken({ template: "supabase" }).catch(() => null)) || (await getToken())
       const supabase = createClerkSupabaseClient(token)
-      const { error } = await supabase.from("startups").update({ status }).eq("id", id)
+      const { data, error } = await supabase.from("startups").update({ status }).eq("id", id).select("id")
 
-      if (!error) {
-        setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)))
+      if (error) throw new Error(error.message)
+      if (!data || data.length === 0) {
+        throw new Error("Update blocked by database permissions — your account is not in the admins list.")
       }
+      setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)))
     } catch (err) {
       console.error("Failed to update status:", err)
+      setActionError(err instanceof Error ? err.message : "Failed to update status. Please try again.")
     } finally {
       setActionLoadingId(null)
     }
@@ -99,16 +104,20 @@ function ProductsInner() {
     if (!confirm(`Are you sure you want to permanently delete "${name}"?`)) return
 
     setActionLoadingId(id)
+    setActionError(null)
     try {
       const token = (await getToken({ template: "supabase" }).catch(() => null)) || (await getToken())
       const supabase = createClerkSupabaseClient(token)
-      const { error } = await supabase.from("startups").delete().eq("id", id)
+      const { data, error } = await supabase.from("startups").delete().eq("id", id).select("id")
 
-      if (!error) {
-        setProducts((prev) => prev.filter((p) => p.id !== id))
+      if (error) throw new Error(error.message)
+      if (!data || data.length === 0) {
+        throw new Error("Delete blocked by database permissions — your account is not in the admins list.")
       }
+      setProducts((prev) => prev.filter((p) => p.id !== id))
     } catch (err) {
       console.error("Failed to delete product:", err)
+      setActionError(err instanceof Error ? err.message : "Failed to delete product. Please try again.")
     } finally {
       setActionLoadingId(null)
     }
@@ -152,6 +161,12 @@ function ProductsInner() {
             className="h-9 max-w-xs rounded-full bg-background"
           />
         </div>
+
+        {actionError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {actionError}
+          </div>
+        )}
 
         <div className="overflow-hidden rounded-2xl border border-border/80 bg-card">
           <Table>
